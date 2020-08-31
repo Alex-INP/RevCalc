@@ -1,0 +1,248 @@
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QTableWidgetItem
+from mainint import Ui_MainWindow
+from dialog1 import Ui_Dialog
+from dialog2 import Ui_Dialog1
+from dialog3 import Ui_Dialog2
+from popdialogmistake import Ui_DialogMistake1
+from popwrongdatamistake import Ui_DialogDataMistake1
+from outofdatamistake import Ui_Outofdatamistake1
+import sys, pickle
+import calcs
+from decimal import *
+
+getcontext().prec = 10
+main_dict = {}
+
+file = open('maindata', 'rb')
+main_dict = pickle.load(file)
+file.close()
+
+class mywindow(QtWidgets.QMainWindow):
+    def __init__(self):
+        super(mywindow, self).__init__()
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+
+        self.setFixedSize(631, 494)
+
+        self.ui.tableWidget.setColumnCount(4)
+        self.ui.tableWidget.setRowCount(10)
+        self.ui.tableWidget.setHorizontalHeaderLabels(("Наименование", "Количество", "Цена за единицу", "Итоговая \n сумма строки"))
+        self.ui.tableWidget.setColumnWidth(0, 200)
+        self.ui.tableWidget.setColumnWidth(1, 110)
+        self.ui.tableWidget.setColumnWidth(2, 110)
+        self.ui.tableWidget.setColumnWidth(3, 110)
+
+
+        self.ui.pushButton_3.clicked.connect(self.newentry)
+        self.ui.pushButton_4.clicked.connect(self.deleteentry)
+        self.ui.pushButton.clicked.connect(self.addentry)
+        self.ui.pushButton_2.clicked.connect(self.calculation)
+        self.ui.pushButton_5.clicked.connect(self.clearlist)
+        self.name_list = []
+
+# otkritie okon
+    def newentry(self):
+        self.application = dialogwindow()
+        self.application.show()
+    def deleteentry(self):
+        self.application = dialogwindow2()
+        self.application.show()
+    def addentry(self):
+        self.application = dialogwindow3()
+        self.application.show()
+    def error1(self):
+        self.application = popmistake()
+        self.application.show()
+    def error2(self):
+        self.application = popdatamistake()
+        self.application.show()
+    def error3(self):
+        self.application = outofdatamistake()
+        self.application.show()
+
+    def clearlist(self):
+        self.name_list.clear()
+
+    def calculation(self):
+        try:
+            self.ui.tableWidget.selectColumn(2)
+            list1 = []
+            for i in (self.ui.tableWidget.selectedItems()):
+                list1.append(Decimal((i.text())))
+            keys1 = []
+            self.ui.tableWidget.selectColumn(0)
+            for i3 in (self.ui.tableWidget.selectedItems()):
+                keys1.append(i3.text())
+
+            dict_counter = calcs.create_dict(list1)
+            target_numbers_dict = calcs.multiply(dict_counter, Decimal(self.ui.lineEdit.text()), list1, Decimal(calcs.start_number_calc(list1)))
+
+            target_numbers = []
+            for i2 in target_numbers_dict:
+                target_numbers.append(target_numbers_dict[i2])
+
+            def colimn_fill(number_list, column_number):
+                row = 0
+                for n in number_list:
+                    widN = QTableWidgetItem(str(n))
+                    self.ui.tableWidget.setItem(row, column_number, widN)
+                    row += 1
+            colimn_fill(target_numbers, 1) #zapolnenie kolonki 2
+
+            def listing(o_dict):
+                o_list = []
+                for i in o_dict:
+                    o_list.append(o_dict[i])
+                return o_list
+
+            special_dict = {}
+            for k, o in zip(keys1, list1):
+                special_dict[k] = o
+            MD_list = listing(special_dict)
+            TND_list = listing(target_numbers_dict)
+            final_calc_results = []
+            for i in MD_list:
+                final_calc_results.append(Decimal(i)*Decimal(TND_list.pop(0)))
+            colimn_fill(final_calc_results, 3) #zapolnenie kolonki 4
+
+            #slojenie rezultatov
+            summ_list = []
+            self.ui.tableWidget.selectColumn(3)
+            for n3 in (self.ui.tableWidget.selectedItems()):
+                summ_list.append(Decimal(n3.text()))
+            summ = 0
+            for nu in summ_list:
+                summ += nu
+
+            if self.ui.lineEdit_2.text() != None:# proverka, ochistka i vstavka rezultata
+                self.ui.lineEdit_2.clear()
+            self.ui.lineEdit_2.insert(str(summ))
+        except:
+            application.error3()
+
+    def adding3(self, boxtext): #popolnenie spiska
+        itm = QTableWidgetItem(boxtext)
+        value = str(main_dict[boxtext])
+        val = QTableWidgetItem(value)
+
+        for i in range(10):
+            if self.ui.tableWidget.item(i, 0) == None:
+                self.ui.tableWidget.setItem(i, 0, itm)
+                self.ui.tableWidget.setItem(i, 2, val)
+                break
+
+class dialogwindow(QtWidgets.QWidget): #Na dobavlenie
+    def __init__(self):
+        super(dialogwindow, self).__init__()
+        self.ui = Ui_Dialog()
+        self.ui.setupUi(self)
+
+        self.setFixedSize(398, 160)
+
+        self.ui.pushButton_2.clicked.connect(self.closing)
+        self.ui.pushButton.clicked.connect(self.newdata)
+
+    def closing(self):
+        self.close()
+    def newdata(self): #objedinenie slovarei
+        try:
+            data = {str((self.ui.lineEdit.text())): Decimal((self.ui.lineEdit_2.text()))}
+            main_dict.update(data)
+
+            file = open('maindata', 'wb')
+            pickle.dump(main_dict, file)
+            file.close()
+
+            self.ui.lineEdit.clear()
+            self.ui.lineEdit_2.clear()
+        except:
+            application.error2()
+
+class popdatamistake(QtWidgets.QWidget): #obrabotka oshibki dannih
+    def __init__(self):
+        super(popdatamistake, self).__init__()
+        self.ui = Ui_DialogDataMistake1()
+        self.ui.setupUi(self)
+
+        self.setFixedSize(343, 120)
+
+        self.ui.pushButton_2.clicked.connect(self.closing)
+    def closing(self):
+        self.close()
+
+class dialogwindow2(QtWidgets.QWidget): #Na udalenie
+    def __init__(self):
+        super(dialogwindow2, self).__init__()
+        self.ui = Ui_Dialog1()
+        self.ui.setupUi(self)
+
+        self.setFixedSize(398, 160)
+
+        for i in main_dict:
+            self.ui.comboBox.addItem(i)
+        self.ui.pushButton.clicked.connect(self.delete_entry) #knopka
+        self.ui.pushButton_1.clicked.connect(self.closing)
+    def closing(self):
+        self.close()
+    def delete_entry(self):
+        del main_dict[self.ui.comboBox.currentText()]
+
+        file = open('maindata', 'wb')
+        pickle.dump(main_dict, file)
+        file.close()
+        self.closing()
+
+class dialogwindow3(QtWidgets.QWidget): #Na popolnenie
+    def __init__(self):
+        super(dialogwindow3, self).__init__()
+        self.ui = Ui_Dialog2()
+        self.ui.setupUi(self)
+
+        self.setFixedSize(398, 160)
+
+        for i in main_dict:
+            self.ui.comboBox_2.addItem(i)
+        self.ui.pushButton_3.clicked.connect(self.adding1) #knopka
+        self.ui.pushButton_2.clicked.connect(self.closing)
+
+    def closing(self):
+        self.close()
+
+    def adding1(self):
+        boxtext = self.ui.comboBox_2.currentText()
+        def adding2_in1():
+            if boxtext in application.name_list: #proverka na povtoreniya
+                application.error1()
+            else:
+                application.name_list.append(boxtext)
+                application.adding3(boxtext)  # peredaem imya
+        adding2_in1()
+
+class popmistake(QtWidgets.QWidget): #okno oshibki popolneniya
+    def __init__(self):
+        super(popmistake, self).__init__()
+        self.ui = Ui_DialogMistake1()
+        self.ui.setupUi(self)
+
+        self.setFixedSize(318, 120)
+
+        self.ui.pushButton.clicked.connect(self.closing)
+    def closing(self):
+        self.close()
+
+class outofdatamistake(QtWidgets.QWidget): #okno oshibki rasscheta
+    def __init__(self):
+        super(outofdatamistake, self).__init__()
+        self.ui = Ui_Outofdatamistake1()
+        self.ui.setupUi(self)
+        self.ui.pushButton_2.clicked.connect(self.closing)
+    def closing(self):
+        self.close()
+
+app = QtWidgets.QApplication([])
+app.setStyle('Fusion')
+application = mywindow()
+application.show()
+sys.exit(app.exec())
