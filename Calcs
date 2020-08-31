@@ -1,0 +1,33 @@
+import random
+from copy import copy
+from decimal import *
+getcontext().prec = 10
+
+def start_number_calc(list1):
+    n = Decimal(0)
+    for i in list1:
+        n += i
+    return n
+
+def create_dict(numbers):
+    d = {}
+    for i in numbers:
+        d[i] = 1
+    return d
+
+def multiply(dict_counter, final_number, numbers, start_number):
+    numbers_copy = list(copy(numbers))
+    while start_number < final_number:
+        rnum = random.choice(numbers)
+        start_number += rnum
+        dict_counter[rnum] += 1
+    while start_number > final_number:
+        minNum = min(numbers_copy)
+        def check():
+            numbers_copy.remove(minNum)
+        if dict_counter[minNum] == 1:
+            check()
+        else:
+            start_number -= minNum
+            dict_counter[minNum] -= 1
+    return dict_counter
